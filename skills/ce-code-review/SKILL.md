@@ -1,6 +1,6 @@
 ---
 name: ce-code-review
-description: "Structured code review for bugs, regressions, tests, and standards. Use before PRs or when asked for review; report-only by default, with explicit local apply available for user-directed fix workflows."
+description: "Run Compound Engineering's structured code-review workflow. Invoke only when the user explicitly names ce-code-review or an explicitly invoked Compound Engineering pipeline routes here; do not auto-activate before PRs or for ordinary review requests."
 argument-hint: "[mode:agent] [apply:local] [blank to review current branch, or provide PR link]"
 ---
 

@@ -1,6 +1,6 @@
 ---
 name: ce-work
-description: Execute a plan or concrete work prompt end-to-end. Use when implementing from a plan document, a spec path, or a clear build request; use ce-debug for open-ended bugs. Standalone use owns the shipping tail; outer orchestrators pass `mode:return-to-caller [implementation_engine:<compact-json>] [implementation_run:<safe-id>] <plan path>` for implementation, recovery, and local verification only.
+description: "Execute an implementation-ready plan end-to-end. Invoke only when the user explicitly names ce-work or an explicitly invoked Compound Engineering pipeline routes here; do not auto-activate for ordinary build, change, fix, or implementation requests."
 argument-hint: "[Plan path, work description, or recovery request with run id; blank uses latest] | [mode:return-to-caller [implementation_engine:<compact-json>] [implementation_run:<safe-id>] <plan path> for outer orchestrators]"
 ---
 
