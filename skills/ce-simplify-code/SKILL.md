@@ -1,6 +1,8 @@
 ---
 name: ce-simplify-code
 description: "Run Compound Engineering's dedicated code-simplification workflow. Invoke only when the user explicitly names ce-simplify-code or an explicitly invoked Compound Engineering pipeline routes here; do not auto-activate after ordinary implementation or cleanup work."
+metadata:
+  opencode/autoinvoke: "false"
 argument-hint: "[blank to simplify current branch changes, or describe what to simplify]"
 ---
 

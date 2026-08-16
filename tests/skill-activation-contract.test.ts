@@ -22,6 +22,7 @@ describe("explicit-only Compound Engineering routing", () => {
       expect(description).toContain("explicitly invoked Compound Engineering pipeline")
       expect(description).toMatch(/do not auto-activate/i)
       expect(description).not.toContain(formerBroadTrigger)
+      expect(data.metadata?.["opencode/autoinvoke"]).toBe("false")
     })
   }
 })

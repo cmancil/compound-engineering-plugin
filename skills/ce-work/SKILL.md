@@ -1,6 +1,8 @@
 ---
 name: ce-work
 description: "Execute an implementation-ready plan end-to-end. Invoke only when the user explicitly names ce-work or an explicitly invoked Compound Engineering pipeline routes here; do not auto-activate for ordinary build, change, fix, or implementation requests."
+metadata:
+  opencode/autoinvoke: "false"
 argument-hint: "[Plan path, work description, or recovery request with run id; blank uses latest] | [mode:return-to-caller [implementation_engine:<compact-json>] [implementation_run:<safe-id>] <plan path> for outer orchestrators]"
 ---
 

@@ -1,6 +1,8 @@
 ---
 name: ce-debug
 description: "Run the Compound Engineering diagnosis loop for bugs and failing behavior. Invoke only when the user explicitly names ce-debug or an explicitly invoked Compound Engineering pipeline routes here; do not auto-activate for ordinary debugging or bug-fix requests."
+metadata:
+  opencode/autoinvoke: "false"
 argument-hint: "[issue reference, error message, test path, or description of broken behavior]"
 ---
 
