@@ -1,6 +1,8 @@
 ---
 name: ce-babysit-pr
-description: "Babysits or watches an open GitHub PR until merge-ready, continuously reacting to review comments, CI failures, and routine base movement throughout the PR's life. Use when asked to 'babysit the PR', 'watch the PR', monitor, or keep an eye on a PR over time — not a one-shot request to resolve review comments or debug one CI failure (those are separate skills). GitHub only, including GitHub Enterprise."
+description: "Babysit an open GitHub PR until merge-ready. Invoke only when the user explicitly asks to babysit, watch, monitor, or keep an eye on a PR; do not auto-activate after PR creation or for a one-shot review or CI fix. GitHub only, including GitHub Enterprise."
+metadata:
+  opencode/autoinvoke: "false"
 argument-hint: "[PR number, URL, or blank for current branch's PR] [watch|checkpoint] [duration] [posture:target|stack-ready|stack-land]"
 ---
 

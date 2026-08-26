@@ -4,6 +4,7 @@ import { describe, expect, test } from "bun:test"
 import { parseFrontmatter } from "../src/utils/frontmatter"
 
 const EXPLICIT_ROUTING_SKILLS = [
+  { name: "ce-plan", formerBroadTrigger: "Use when asked to plan" },
   { name: "ce-work", formerBroadTrigger: "Use when implementing from a plan" },
   { name: "ce-debug", formerBroadTrigger: "Use for errors, stack traces" },
   { name: "ce-code-review", formerBroadTrigger: "Use before PRs or when asked for review" },
@@ -23,6 +24,16 @@ describe("explicit-only Compound Engineering routing", () => {
       expect(description).toMatch(/do not auto-activate/i)
       expect(description).not.toContain(formerBroadTrigger)
       expect(data.metadata?.["opencode/autoinvoke"]).toBe("false")
+    })
+  }
+
+  for (const name of ["ce-babysit-pr", "lfg"]) {
+    test(`${name} cannot auto-invoke in OpenCode`, () => {
+      const skillPath = path.join(process.cwd(), "skills", name, "SKILL.md")
+      const { data } = parseFrontmatter(readFileSync(skillPath, "utf8"), skillPath)
+
+      expect(data.metadata?.["opencode/autoinvoke"]).toBe("false")
+      expect(String(data.description)).toMatch(/explicit|only when/i)
     })
   }
 })

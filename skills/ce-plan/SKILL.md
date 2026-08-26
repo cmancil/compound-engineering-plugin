@@ -1,6 +1,8 @@
 ---
 name: ce-plan
-description: "Create structured plans for multi-step work, including software and non-software tasks. Use when asked to plan, break down implementation, plan from requirements, or deepen an existing plan; prefer ce-brainstorm for exploratory framing."
+description: "Run Compound Engineering's structured planning workflow. Invoke only when the user explicitly names ce-plan, explicitly requests Compound Engineering planning, or an explicitly invoked Compound Engineering pipeline routes here; do not auto-activate for ordinary planning requests."
+metadata:
+  opencode/autoinvoke: "false"
 argument-hint: "[optional: feature description, requirements doc path, plan path to deepen, or any task to plan] [output:html]"
 ---
 
