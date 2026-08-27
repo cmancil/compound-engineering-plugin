@@ -173,8 +173,8 @@ export async function resolveCodexDevContext(
   env: NodeJS.ProcessEnv = process.env,
   runner: CommandRunner = new BunCommandRunner(),
 ): Promise<CodexDevContext> {
-  const home = env.HOME
-  if (!home) throw new Error("HOME is not set")
+  const home = env.HOME || env.USERPROFILE
+  if (!home) throw new Error("HOME and USERPROFILE are not set")
 
   const options = { cwd, env }
   const repoRootRaw = trim(await checkedRun(runner, "git", ["rev-parse", "--show-toplevel"], options))
@@ -279,6 +279,10 @@ export type ManagedCollectionLinkExpectation =
   | { kind: "absent" }
   | { kind: "valid"; target: string }
 
+function directoryLinkType(): "dir" | "junction" {
+  return process.platform === "win32" ? "junction" : "dir"
+}
+
 export async function removeManagedCollectionLink(
   collectionPath: string,
   expectedTarget: string,
@@ -371,7 +375,11 @@ export async function removeManagedCollectionLink(
   }
 
   try {
-    await fs.symlink(recoveryPath, collectionPath, stat.isDirectory() ? "dir" : "file")
+    await fs.symlink(
+      recoveryPath,
+      collectionPath,
+      stat.isDirectory() ? directoryLinkType() : "file",
+    )
   } catch (error) {
     restorationFailed(error)
   }
@@ -386,15 +394,15 @@ export async function replaceManagedCollectionLink(
   expected: ManagedCollectionLinkExpectation,
 ): Promise<void> {
   if (expected.kind === "absent") {
-    await fs.symlink(target, collectionPath, "dir")
+    await fs.symlink(target, collectionPath, directoryLinkType())
     return
   }
 
   await removeManagedCollectionLink(collectionPath, expected.target)
   try {
-    await fs.symlink(target, collectionPath, "dir")
+    await fs.symlink(target, collectionPath, directoryLinkType())
   } catch (error) {
-    await fs.symlink(expected.target, collectionPath, "dir").catch(() => undefined)
+    await fs.symlink(expected.target, collectionPath, directoryLinkType()).catch(() => undefined)
     throw error
   }
 }

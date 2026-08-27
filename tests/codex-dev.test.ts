@@ -155,6 +155,20 @@ class StatefulCodexRunner implements CommandRunner {
 }
 
 describe("Codex local development context", () => {
+  test("uses USERPROFILE on Windows when HOME is unset", async () => {
+    const root = await makeTempRoot("codex-dev-userprofile-")
+    const repo = path.join(root, "repo")
+    const userProfile = path.join(root, "user")
+    await fs.mkdir(repo, { recursive: true })
+    await fs.mkdir(userProfile, { recursive: true })
+    await createCeRepo(repo)
+
+    const env = { ...process.env, HOME: undefined, USERPROFILE: userProfile, CODEX_HOME: undefined }
+    const context = await resolveCodexDevContext(repo, env, new BunCommandRunner())
+
+    expect(context.codexHome).toBe(path.join(userProfile, ".codex"))
+  })
+
   test("uses the invoking linked worktree and reports provenance and dirty files", async () => {
     const root = await makeTempRoot("codex-dev-worktree-")
     const primary = path.join(root, "primary repo")

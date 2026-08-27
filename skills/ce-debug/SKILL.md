@@ -1,6 +1,8 @@
 ---
 name: ce-debug
-description: 'Diagnosis loop for bugs and failing behavior. Use for errors, stack traces, regressions, failed tests, issue-tracker bugs, stuck investigations after failed fixes, or asks to debug/fix a bug.'
+description: "Run the Compound Engineering diagnosis loop for bugs and failing behavior. Invoke only when the user explicitly names ce-debug or an explicitly invoked Compound Engineering pipeline routes here; do not auto-activate for ordinary debugging or bug-fix requests."
+metadata:
+  opencode/autoinvoke: "false"
 argument-hint: "[issue reference, error message, test path, or description of broken behavior]"
 ---
 
