@@ -444,14 +444,14 @@ Distinguish an empty successful search from a failed or unavailable search:
 
 **This gate fails closed: it only ever fires for a positive count of low-risk application code, and every uncertainty resolves to the full roster.** Collapse to a lite roster only when **all** of these hold:
 
-- Stage 1b returned `lite_eligible: true` (1-39 executable changed lines, zero uncounted files, and no path signals), AND
+- Stage 1b returned `lite_eligible: true` (1-39 executable changed lines, zero uncounted files after excluding supporting text documentation, and no path signals), AND
 - No content-based risk read from the diff in Stage 3 (auth, payments, data mutation, external API, secrets/permissions, deserialization, crypto, concurrency/background jobs, filesystem/process execution), AND
 - Stage 3b standards discovery completed successfully (with applicable paths or a confirmed empty result), AND
 - No conditional persona other than `project-standards` was selected in Stage 3.
 
-`exec_lines: null`, `uncounted_files > 0`, a non-empty `signals` array, or helper failure are hard disqualifiers. A pure code diff that also touches one `.md` runs the full roster; that conservatism is the point.
+`exec_lines: null`, `uncounted_files > 0`, a non-empty `signals` array, or helper failure are hard disqualifiers. Supporting changelogs and text documentation remain in the reviewed diff but do not disqualify small code changes. Agent instructions, skills, operational configuration, and documentation that describes a content-based risk still require the applicable deeper review.
 
-**Lite roster:** the inline fast pass (Stage 4) plus `correctness-reviewer`, and `project-standards-reviewer` only when Stage 3b found applicable paths. Announce the actual roster plainly and note it in Coverage.
+**Lite roster:** one `correctness-reviewer`, also given the applicable standards paths and supporting documentation. This reviewer covers correctness, relevant coverage, and project requirements in one pass; do not add a separate inline fast pass or `project-standards-reviewer` for a lite review. Announce the actual roster plainly and note it in Coverage.
 
 **Do not collapse** when any gate condition fails — the gate keys on risk, not size alone (a 12-line auth change still needs the full roster). When in doubt, run the full roster.
 

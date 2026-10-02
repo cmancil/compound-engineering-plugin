@@ -560,7 +560,7 @@ describe("ce-code-review contract", () => {
     expect(content).not.toMatch(/While local reviewers run, do the inline fast pass/i)
   })
 
-  test("allows project standards inside the lite roster without disabling it", async () => {
+  test("assigns standards to the single correctness reviewer in the lite roster", async () => {
     const content = await readRepoFile("skills/ce-code-review/SKILL.md")
 
     expect(content).toMatch(
@@ -570,8 +570,9 @@ describe("ce-code-review contract", () => {
       /No conditional persona other than `project-standards` was selected in Stage 3/i,
     )
     expect(content).toMatch(
-      /Lite roster:[\s\S]{0,200}`project-standards-reviewer` only when Stage 3b found applicable paths/i,
+      /Lite roster:[\s\S]{0,160}one `correctness-reviewer`[\s\S]{0,100}applicable standards paths/i,
     )
+    expect(content).toContain("do not add a separate inline fast pass or `project-standards-reviewer`")
   })
 
   test("findings presentation is action-shaped and enforces hard constraints, mirrors the template", async () => {

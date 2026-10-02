@@ -4,7 +4,7 @@
 
 `ce-debug` is the **investigation-first** debugging skill. It refuses to propose a fix until it can explain the full causal chain from trigger to symptom with no gaps. For uncertain links in that chain, it requires a **prediction** — something in a different code path or scenario that must also be true if the link is right. **When a prediction is wrong but a fix appears to work, the skill flags it: you found a symptom, not the cause.**
 
-It right-sizes. Trivial bugs (typos, missing imports, obvious one-line fixes) take an explicit fast-path in Phase 0 — fix it, leave a one-line note, stop. Anything else flows through the full framework, with complex bugs spending more time in each phase naturally. The fix is optional — diagnosis-only is a first-class outcome. When you do choose a fix, non-trivial diffs can continue through simplify and code review before the PR handoff so the result is ready to review, not just locally patched.
+It right-sizes. Trivial bugs take the Phase 0 fast path; other bugs receive enough investigation to establish the cause. Diagnosis-only remains a first-class outcome. After a fix, reuse focused validation and one diff inspection, then deliver. Additional simplification and code review are opt-in.
 
 The compound-engineering ideation chain is `/ce-ideate → /ce-brainstorm → /ce-plan → /ce-work`. `ce-debug` is the bug-shaped sibling to `/ce-work` — when the input is broken behavior rather than a feature to build, this skill takes over. It can also escalate to `/ce-brainstorm` when investigation reveals the bug isn't really a bug; it's a design problem.
 
@@ -14,7 +14,7 @@ The compound-engineering ideation chain is `/ce-ideate → /ce-brainstorm → /c
 
 | Question | Answer |
 |----------|--------|
-| What does it do? | Investigates a bug end-to-end (reproduce, trace, root-cause), forms hypotheses with predictions, optionally implements a test-first fix, then polishes/reviews non-trivial fixes before commit + PR |
+| What does it do? | Investigates the root cause, optionally implements a focused test-first fix, then delivers using existing validation evidence |
 | When to use it | Failed tests, error messages, regressions, GitHub/Linear/Jira issue references, "I've been stuck on this for hours" |
 | What it produces | A debug summary with root cause, recommended tests, applied fix, post-fix quality notes, and (if you opt in) a PR |
 | What's next | Auto commit + PR by default; or "diagnosis only" if you'd rather take it from there |
@@ -63,7 +63,7 @@ Common debugging anti-patterns:
 - **One change at a time** — anti-shotgun discipline
 - **Smart escalation when stuck** — diagnose *why* hypotheses are exhausted, don't just try harder
 - **Test-first fix** — inspect existing tests first, use/update/strengthen the right test home or add a focused regression test, verify it fails for the right reason, then implement; never both at once
-- **Post-fix quality tail** — for non-trivial fixes, simplify the relevant diff, run the self-sizing code review, apply safe findings, and preserve residuals before shipping
+- **Opt-in quality work** — additional simplification or review runs only when requested or required by an explicitly invoked pipeline
 
 ---
 
@@ -98,11 +98,11 @@ When the input references an issue (`#123`, GitHub URL, Linear URL, Jira key), t
 
 ### 6. Test-first fix discipline
 
-If you opt to fix (rather than "diagnosis only"), the skill first inspects existing tests for the affected behavior. It uses an existing failing test when one already captures the bug, updates or strengthens the existing test that owns the contract when appropriate, or adds a focused regression test only when no existing test fits. It verifies the failure, applies the smallest root-cause fix, reruns the focused test plus broader regression checks, then self-reviews the diff before moving to its post-fix quality tail.
+If you opt to fix, use or strengthen the existing regression test where possible, establish the failure, apply the minimal correction, and verify the focused check. Broaden checks only for a concrete higher-risk change, an explicit request, or project requirements. A passing check remains valid until relevant behavior, tests, dependencies, or configuration change.
 
 ### 7. Post-fix polish and review
 
-After the root-cause fix is green, `ce-debug` conditionally runs the same quality tail used by the broader shipping workflow: simplify first when the diff is non-mechanical and large enough to benefit, then review the final fix. Tiny mechanical fixes skip this with a reason. On pre-existing dirty branches, simplify and review are scoped to the bug-fix files so they do not wander into unrelated user work; files with overlapping pre-existing edits skip file-level simplification. The skill records the tail in a Post-Fix Quality block before commit or PR handoff, and accepted residual findings are written to a durable sink even when the user chooses commit-only or stop.
+After the root-cause fix is green, proceed to delivery using the focused checks and one diff inspection. Additional simplification or code review requires an explicit request or an explicitly invoked pipeline; diff size alone does not start it. Requested extra work stays within fix-owned files and preserves unrelated edits. Recheck only evidence invalidated by subsequent changes.
 
 ### 8. Conditional defense-in-depth
 
@@ -124,7 +124,7 @@ It forms two hypotheses, ranked by likelihood. The first is testable directly; t
 
 The prediction holds. The skill presents the root cause with file:line references, the proposed fix, and the specific tests that should be used, updated, strengthened, or added (with assertion guidance). It asks: fix it now, diagnosis only, or rethink the design?
 
-You pick "fix it now." It creates a feature branch, inspects the existing tests, updates the right test or adds a focused one, verifies it fails for the right reason, implements the minimal fix, and runs tests. If the fix is non-trivial, it runs simplify before code review, applies clear review findings when the review scope is fix-only, reruns targeted checks, records Post-Fix Quality, and then hands off to `/ce-commit-push-pr`.
+You pick "fix it now." The skill applies the smallest root-cause fix, verifies the focused regression check, inspects the diff once, and proceeds to the authorized commit/PR handoff. It adds simplification or another review only when explicitly requested.
 
 ---
 

@@ -9,7 +9,8 @@ const SCOPE_SCRIPT = path.join(SKILL_DIR, "scripts", "review-scope.py")
 const FINDINGS_SCRIPT = path.join(SKILL_DIR, "scripts", "findings-mechanics.py")
 
 function run(command: string, args: string[], cwd?: string, input?: string) {
-  return spawnSync(command, args, { cwd, input, encoding: "utf8" })
+  const executable = process.platform === "win32" && command === "python3" ? "python" : command
+  return spawnSync(executable, args, { cwd, input, encoding: "utf8" })
 }
 
 function git(cwd: string, ...args: string[]) {
@@ -31,7 +32,7 @@ function fixtureRepo() {
 }
 
 describe("ce-code-review deterministic mechanics", () => {
-  test("scope helper counts executable changes and fails closed on uncounted files", () => {
+  test("scope helper keeps small code changes with supporting documentation lite", () => {
     const { dir, base } = fixtureRepo()
     mkdirSync(path.join(dir, "docs"))
     writeFileSync(path.join(dir, "service.ts"), "export const value = 2\n")
@@ -43,10 +44,26 @@ describe("ce-code-review deterministic mechanics", () => {
     const scope = JSON.parse(result.stdout)
 
     expect(scope.exec_lines).toBe(2)
-    expect(scope.uncounted_files).toBe(1)
+    expect(scope.uncounted_files).toBe(0)
     expect(scope.changed_files).toEqual(["docs/note.md", "service.ts"])
-    expect(scope.lite_eligible).toBe(false)
+    expect(scope.lite_eligible).toBe(true)
   })
+
+  test.each(["config.yaml", "AGENTS.md", "skills/example/SKILL.md"])(
+    "scope helper keeps operational files out of the documentation exemption: %s",
+    (file) => {
+      const { dir, base } = fixtureRepo()
+      writeFileSync(path.join(dir, "service.ts"), "export const value = 2\n")
+      mkdirSync(path.dirname(path.join(dir, file)), { recursive: true })
+      writeFileSync(path.join(dir, file), "operational change\n")
+      git(dir, "add", ".")
+      const result = run("python3", [SCOPE_SCRIPT, "--base", base], dir)
+      expect(result.status).toBe(0)
+      const scope = JSON.parse(result.stdout)
+      expect(scope.uncounted_files).toBe(1)
+      expect(scope.lite_eligible).toBe(false)
+    },
+  )
 
   test("scope helper emits UNKNOWN-equivalent state for an invalid endpoint", () => {
     const { dir } = fixtureRepo()
