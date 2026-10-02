@@ -16,6 +16,7 @@ CODE_EXTENSIONS = {
     ".java", ".swift", ".kt", ".c", ".cc", ".cpp", ".cs", ".php",
     ".ex", ".exs", ".scala",
 }
+DOCUMENTATION_EXTENSIONS = {".md", ".rst", ".txt"}
 
 SIGNAL_PATTERNS = {
     "migrations": re.compile(
@@ -162,23 +163,31 @@ def main() -> int:
 
     files = sorted(line for line in names.stdout.splitlines() if line)
     executable_lines = 0
+    documentation_files = set()
     for line in numstat.stdout.splitlines():
         parts = line.split("\t")
-        if len(parts) < 3 or Path(parts[2]).suffix.lower() not in CODE_EXTENSIONS:
+        if len(parts) < 3:
             continue
         try:
-            executable_lines += int(parts[0]) + int(parts[1])
+            changed_lines = int(parts[0]) + int(parts[1])
         except ValueError:
             # Binary/unknown counts fail the lite gate through uncounted_files below.
-            pass
+            continue
+        file = parts[2]
+        extension = Path(file).suffix.lower()
+        if extension in CODE_EXTENSIONS:
+            executable_lines += changed_lines
+        elif extension in DOCUMENTATION_EXTENSIONS and not AGENT_SURFACE_PATTERN.search(file):
+            documentation_files.add(file)
 
     uncounted = sum(
-        1 for file in files if Path(file).suffix.lower() not in CODE_EXTENSIONS
+        1 for file in files
+        if Path(file).suffix.lower() not in CODE_EXTENSIONS and file not in documentation_files
     )
     signals = [
         name
         for name, pattern in SIGNAL_PATTERNS.items()
-        if any(pattern.search(file) for file in files)
+        if any(pattern.search(file) for file in files if file not in documentation_files)
     ]
     lite = 1 <= executable_lines <= 39 and uncounted == 0 and not signals
 

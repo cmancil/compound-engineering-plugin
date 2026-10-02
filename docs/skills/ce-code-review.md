@@ -70,7 +70,7 @@ Generalist code review prompts collapse in predictable ways:
 
 A small low-risk change runs the two-person core. A Rails auth feature with migrations adds the relevant domain lenses. The skill decides which personas fit the diff:
 
-- **Core (every review)** — `correctness-reviewer`, `project-standards-reviewer`
+- **Core** — correctness plus applicable project standards; for an eligible small, low-risk diff, one correctness reviewer covers both without a separate fast pass. Supporting text documentation and changelogs remain in the reviewed diff and do not disqualify that smaller roster. Agent instructions, operational config, and content-based risk still require the applicable deeper review.
 - **Generic conditional** — testing for changed tests/harnesses or meaningful runtime behavior with no corresponding test work; maintainability for large or structural work; agent-native for agent-facing surfaces; learnings only when an existing `docs/solutions/` corpus has plausible matches
 - **Cross-cutting conditional** — security, performance, API contract, data migrations, reliability, adversarial, previous-comments — each selected only when the diff touches its concern
 - **Stack-specific conditional** — Julik frontend races, Swift/iOS — only when the matching runtime domain is touched. Structural quality (complexity deletion, 1k-line regressions, spaghetti) lives in the conditional maintainability persona.

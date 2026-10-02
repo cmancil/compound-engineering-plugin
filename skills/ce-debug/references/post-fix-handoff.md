@@ -2,23 +2,23 @@
 
 Loaded at Phase 4 when Phase 3 actually applied a fix in interactive mode. Not used in `mode:pipeline` (see `pipeline-mode.md`) and not used when the user chose "Diagnosis only" — in both cases Phase 4 ends at the Debug Summary.
 
-The goal of this tail is a **PR-ready** fix, not merely a locally green one — while never letting polish or review reach outside the bug's scope.
+Deliver the verified fix using the Phase 3 evidence, without repeating validation or expanding the bug's scope.
 
-## Post-fix polish/review tail (before commit or PR)
+## Optional post-fix polish/review (before commit or PR)
 
-**Contextual overrides first.** Check the user's original prompt, loaded memories, and the project's active instructions already in your context for explicit, clearly applicable preferences that conflict with automatic polish or review — "minimal hotfix only", "do not run review", "always ask before cleanup", "ship the smallest possible diff". Honor them and state what was skipped.
+**Opt-in only.** Invoke `ce-simplify-code` or `ce-code-review` only when the user explicitly requested that work or an explicitly invoked pipeline requires it. A non-trivial diff, multiple files, or a high-risk surface does not independently authorize another workflow. Required risk-based validation remains part of Phase 3.
 
-**Skip the tail only with a reason:** purely mechanical fixes (typo/import-only, formatting/lint-only, dependency-only, generated artifacts, docs-only, or roughly under 10 changed lines with no sensitive surface). Keep the Phase 3 tests and self-review regardless, and carry the skip reason into the summary.
+**Default handoff.** When no extra workflow was requested, proceed directly to delivery with the existing focused validation and diff inspection. Do not add a review menu or a Post-Fix Quality block merely to report skipped steps.
 
-**Simplify before review when useful.** Invoke `ce-simplify-code` when the fix diff is non-mechanical and large enough to benefit (default: >=30 changed lines), touches multiple implementation files, introduces a new helper or abstraction, or affects shared/risky surfaces (auth/authz, public contracts, persistence, concurrency, background jobs, external services). Use the branch diff only when the branch is skill-owned or clearly contains only this fix; on a pre-existing branch, scope to fix-owned files that were clean before Phase 3. If a fix-owned file already had pre-existing user edits, skip it and record `Simplify: skipped for overlapping pre-existing edits` — file-level simplification could rewrite unrelated hunks the user did not authorize.
+**Scope requested simplification.** Use the branch diff only when the branch is skill-owned or clearly contains only this fix; otherwise scope to fix-owned files that were clean before Phase 3. Skip files containing pre-existing user edits.
 
-**Review the final fix scope.** Review every non-mechanical fix unless review tooling is unavailable. Run default `ce-code-review` **only when its diff scope is known to be this fix**: the branch was created by this skill, or the pre-fix tree was clean and you can pass `base:<pre-fix-HEAD>`. On a pre-existing dirty branch or one with unrelated committed work, standalone review would reach outside the bug scope — instead use the harness's lightweight review tool if it accepts an explicit file scope, else review the fix-owned files manually and record `Code review: targeted manual due to unrelated branch work`. If `ce-code-review` is unavailable on an otherwise fix-only scope, fall back to the harness's lightweight review tool, else one explicit manual diff scan, and state that dedicated review was unavailable.
+**Scope requested review.** Run `ce-code-review` only on a fix-only branch or with `base:<pre-fix-HEAD>` from a clean pre-fix tree. Otherwise use an explicitly file-scoped review, or the Phase 3 manual inspection, and disclose the scope limit.
 
 **Handle residual findings before shipping.** Do not auto-open a PR with unresolved P0/P1 findings, or with findings whose fix needs a product/design decision — ask whether to fix now, accept/defer durably, or stop. Accepted residuals must not live only in the session: if a PR will be opened, pass them as "Known Residuals" context to `ce-commit-push-pr`; on commit-only or stop, prefer filing a ticket per finding in the tracker detected in Phase 1.4, with enough background to action it standalone (the finding, why it matters, file:line, severity, a pointer to the review run, and the branch/head SHA so it points at the code even without a PR). Only when no tracker is reachable, write `<root>/residual-review-findings/<branch-or-head-sha>.md`, stage it with the fix, and name the path in the final summary.
 
-**Re-verify after tail edits.** If simplification or review changed code, rerun the bug's regression test and any targeted checks the tail identified. Never proceed to commit or PR with a red tree.
+**Re-verify only invalidated evidence.** If requested simplification or review changes relevant behavior, tests, dependencies, or configuration, rerun the affected focused check. Reuse successful results after formatting, committing, pushing, and PR-description edits. Report unrelated pre-existing failures without expanding the fix.
 
-Then append this block below the Debug Summary, before the commit/PR decision:
+Only when extra quality work actually ran, append this block below the Debug Summary:
 
 ```
 ## Post-Fix Quality

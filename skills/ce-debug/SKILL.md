@@ -208,8 +208,8 @@ If the user chose "Diagnosis only," skip to Phase 4's summary. If they chose "Re
 1. Choose the regression test's home per the rule in Phase 1.1 — existing failing test, updated existing test, strengthened over-mocked test, or a new focused one.
 2. Verify that test fails for the right reason — the root cause, not unrelated setup.
 3. Implement the **minimal** fix: the root cause and nothing else. No drive-by refactors, formatting, or unrelated cleanup — those are separate commits.
-4. Verify the test passes, then run the broader suite for regressions.
-5. Self-review the diff — read every changed line for style violations, missed edge cases, regressions in adjacent behavior, and missing coverage. The broader polish/review/PR tail belongs to Phase 4, after the debug summary.
+4. Verify the focused regression check passes. Broaden validation only when the project's active instructions require it, the user requested it, or concrete risk (such as authentication, migrations, destructive data operations, or money) needs broader coverage. Reuse a successful result until a relevant behavior, test, dependency, or configuration change invalidates it; a commit or formatting-only change does not itself require another run.
+5. Inspect the fix-owned diff once for correctness and unmet requirements. Do not add cosmetic cleanup or another review workflow. Phase 4 handles delivery and any explicitly requested extra review.
 
 **On a failed fix:** return to Phase 2 and *explicitly invalidate the current hypothesis* before forming a new one — state what evidence ruled it out, then form a new hypothesis with its own grounding observation and prediction. Do not retry variants of the same theory ("maybe it was the other branch", "let me also catch this case"); that is the rationalization spiral, not iteration. **3 failed attempts = smart escalation** (same table as Phase 2): if fixes keep failing, the root cause identification was likely wrong.
 
@@ -237,11 +237,11 @@ If the user chose "Diagnosis only," skip to Phase 4's summary. If they chose "Re
 
 **If Phase 3 was skipped**, stop after the summary — the user already said they were taking it from here. Do not prompt.
 
-**If Phase 3 ran, read `references/post-fix-handoff.md` now and follow it before routing below.** It owns the quality tail this phase requires — the contextual-override checks, the skip-for-mechanical-fixes rule, the scoping rules that keep `ce-simplify-code` and `ce-code-review` off unrelated branch work, residual handling, the `## Post-Fix Quality` block, and the learning-capture criteria — and none of that appears in this body. The routing below names *which* action fires, never the scope rules that make it safe, so it cannot be improvised from: skipping the read ships an unreviewed fix, lets review reach into unrelated branch work, and strands accepted findings in the session.
+**If Phase 3 ran, read `references/post-fix-handoff.md` before routing below.** It owns the opt-in boundary and scope for extra simplify/review work, residual handling, and delivery details. A debugging request alone does not start another quality workflow.
 
 #### Routing
 
-The branch decides whether to ask. **Fire the action itself** via the platform's skill-invocation primitive — never merely tell the user to type a command.
+Use existing delivery authorization first: when the user or active project instructions already specify commit/PR delivery, follow it without asking again, including on a pre-existing branch. Otherwise use the branch rules below. **Fire the action itself** via the platform's skill-invocation primitive — never merely tell the user to type a command.
 
 - **Skill-owned branch** (this skill created it in Phase 3) — do not ask. Preview what will be committed and that a PR will be opened, then **invoke the `ce-commit-push-pr` skill with `branding:on`.** Surface the resulting PR URL.
 - **Pre-existing branch** (the skill did not create it) — ask (per **Blocking questions**), then route the answer:

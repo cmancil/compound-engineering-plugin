@@ -58,7 +58,7 @@ Resolving PR feedback at scale fails in predictable ways:
 - **Drop bot wrapper noise silently** — non-actionable boilerplate is filtered, not announced
 - **Judge centrally — the legitimacy gate** — the orchestrator decides each finding's verdict in its own context, where it can dedup reads, cluster a systematically-wrong reviewer's findings across threads, and weigh the author's design intent; it fixes by default and diverts only on a concrete signal (the finding's wrong, the fix would harm, it buys nothing, or the risk can't be bounded)
 - **Fan out only the fixes** — subagents are dispatched solely to implement approved fixes (pure executors, no re-judging); fixers that touch overlapping files serialize automatically
-- **Combined validation** — one full validation run after all fixers complete, catches cross-agent regressions
+- **Combined validation** — reuse valid focused results; run one relevant integration check when combined changes leave a coverage gap
 - **Reply with quoted context** — every reply quotes the relevant feedback for continuity, then states what was done
 - **Resolve via GraphQL** — review threads get resolved; PR comments and review bodies get a top-level reply (no resolve mechanism in the API)
 
@@ -68,7 +68,7 @@ Resolving PR feedback at scale fails in predictable ways:
 
 ### 1. Default to fixing — divert only on a tripwire
 
-Most review feedback — across P0–P2, nitpicks included — is correct and worth fixing, so the default is to fix it. Crucially, validation isn't a separate analysis pass: the agent has to read the code to make the fix anyway, and the checks are *tripwires it notices during that read*, not a gate every item must argue its way through. When nothing trips, it fixes and moves on — no per-item deliberation. The deep work (reading callers, assessing blast radius, writing a decision for the user) is spent only on the minority of items that trip a wire.
+Fix demonstrated defects, explicit requirement violations, and material security, reliability, or performance risks. Cosmetic preferences, speculative hardening, and minor cleanup receive a brief reply without code changes unless specifically requested. Evaluate the code once per affected area and stop after the requested feedback is handled.
 
 An item diverts from a fix only on a concrete signal:
 
@@ -114,7 +114,7 @@ Sequential fallback: platforms without parallel dispatch run fixers sequentially
 
 ### 6. Combined validation after all fixers complete
 
-Each fixer runs targeted tests on its own changes. After all fixers return, the skill aggregates `files_changed` and runs the project's full validation **once** — catching cross-agent interactions targeted runs can't see.
+Reuse successful targeted checks that still cover the combined changes. Run one existing integration check when interactions remain untested or changes invalidate earlier evidence. Broader validation requires project instructions, an explicit request, or concrete higher risk. Formatting, commits, pushes, and PR-description edits do not themselves require another run.
 
 | Outcome | Action |
 |---------|--------|
@@ -232,7 +232,7 @@ Scripts in `scripts/`: `get-pr-comments` (GraphQL fetch), `get-thread-for-commen
 ## FAQ
 
 **Do you still fix nitpicks?**
-Yes — by default. Most feedback, nitpicks included, is correct and worth fixing, so the agent fixes unless reading the code trips a concrete signal: the finding doesn't hold, the fix would make the code worse, or the change buys nothing real. A correct nit that improves the code (even slightly) gets fixed; a purely cosmetic one with no benefit gets a brief reply instead of churn. The skip bar is "no benefit," not "minor."
+Only when specifically requested, required by the project, or backed by a demonstrated defect. Routine feedback resolution leaves cosmetic preferences and speculative improvements unchanged and explains that briefly.
 
 **Does it treat bot feedback differently from human feedback?**
 No — and that's deliberate. Validation is judged on merit, not authority: reading the actual code to confirm a finding is the same work whether a bot or a human raised it, and an authority heuristic ("bot → probably noise") risks dismissing a real bot-caught bug. The merit tripwires (does the finding hold? does the fix actually help?) naturally filter bot noise — mostly speculative or immaterial — without ever needing to classify the source. The same applies to *form* — inline thread vs. formal review body vs. top-level comment changes only how the reply is posted and resolved, never whether the finding is correct.

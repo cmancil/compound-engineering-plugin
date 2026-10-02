@@ -69,7 +69,7 @@ This is the gate. Judge every **new** item here, in your own context, before any
 Working over the full set lets you do what a per-thread subagent can't:
 - **Dedup reads by file** — read a file once and judge all its threads together.
 - **Cross-item reasoning** — cluster findings by root assumption; a source (often a bot) that's wrong in one place is suspect across its siblings; converging requests from independent reviewers are a strong fix signal.
-- **Selective depth** — clear nits need only the comment plus the diff line; deep-read (callers, invariants, `git blame`/PR rationale for author intent) only where a finding is contestable or the code looks deliberate. That deep read on the contestable minority is what catches a confidently-wrong reviewer.
+- **Selective depth** — reply briefly to cosmetic suggestions outside the requested scope. Read callers or history only when needed to decide a concrete defect or requirement violation; do not investigate every nit.
 
 Produce a verdict per item and sort into three lists:
 
@@ -128,9 +128,9 @@ Fixes can occasionally expand beyond their referenced file (e.g., renaming a met
 
 Aggregate `files_changed` across every fixer summary. If it's empty, skip steps 5 and 6 and proceed to step 7.
 
-Fixers run only targeted tests on their own changes. This step runs the project's full validation **once** against the combined diff to catch cross-agent interactions that targeted runs can't see.
+Reuse successful focused checks from fixers when they still cover the final combined changes. Run one smallest relevant integration check only when combined edits invalidate that evidence or leave an interaction untested. Broader validation requires the project's active instructions, an explicit user request, or a concrete higher-risk change such as authentication, migrations, destructive data operations, or money.
 
-1. **Run the project's validation command** (test suite, type check, or whatever the project's active conventions specify). Run once, not per-agent.
+1. **Select the existing project check that covers the gap**, if any. Do not repeat a successful check because files were formatted, committed, pushed, or prepared for review. If no gap remains, carry the recorded results forward.
 
 2. **Green** -> proceed to step 6.
 

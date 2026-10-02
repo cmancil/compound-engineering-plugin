@@ -2,7 +2,7 @@
 
 #### Inline fast pass (emit before the reviewer queue)
 
-To surface findings in seconds, **immediately before the first foreground reviewer dispatch** the orchestrator does a quick first-principles scan of the diff it already holds — emit the fast-pass block as text, then begin the deterministic reviewer queue without an intervening wait.
+For a full roster, **immediately before the first foreground reviewer dispatch** the orchestrator does a quick first-principles scan of the diff it already holds — emit the fast-pass block as text, then begin the deterministic reviewer queue without an intervening wait. Skip this entire inline fast-pass section for the lite roster.
 
 Scan only for **high-signal, obvious** issues a careful first read catches: data/SQL safety, injection (shell/SQL/LLM-output trust boundary), broken control flow, a missing `await`/unhandled promise, a swapped argument or off-by-one, an enum/status added without updating its sibling switch, a null deref on a value the diff makes reachable. Do **not** do deep analysis, read beyond the diff (except a quick Grep for enum completeness), or chase subtle concerns. Quote the verbatim motivating line for each, same bar as a persona finding.
 
@@ -15,7 +15,7 @@ The fast pass enters Stage 5 as a pseudo-reviewer named `fast-pass`, with two ha
 
 Do not feed `fast-pass` candidates into the persona or validator prompts — those agents review the raw diff independently, and seeding them would manufacture the false agreement this cap exists to prevent. If the fast pass finds nothing obvious, emit one line saying so and proceed; never block dispatch on it.
 
-When Stage 3c selected the lite roster, the fast pass still runs.
+When Stage 3c selected the lite roster, dispatch only its correctness reviewer; no fast-pass pseudo-reviewer is produced.
 
 **Reconcile the preliminary block in the final report.** A preliminary fast-pass item that did not survive (deduped away, demoted at the gate, or dropped by validation) must be accounted for, not left dangling — add a one-line "Preliminary fast-pass items withdrawn: <n> (<reason>)" note so a user who saw a scary preliminary finding learns it was cleared. Mark any final finding that survived from `fast-pass` alone (no persona corroboration) so its weaker provenance is visible.
 
@@ -62,7 +62,7 @@ For each selected reviewer, read the corresponding local prompt asset from `refe
 4. PR metadata: title, body, and URL when reviewing a PR (empty string otherwise). Passed in a `<pr-context>` block so reviewers can verify code against stated intent
 5. Review context: intent summary, file list, diff, scope mode (`local-aligned` | `pr-remote` | `branch-remote`), and remote head ref (`PR_HEAD_REF` or `<branch-head-ref>`) when set
 6. Run ID and reviewer name for the artifact file path
-7. **For selected `project-standards` only:** the non-empty standards file path list from Stage 3b, wrapped in a `<standards-paths>` block appended to the review context
+7. **For selected `project-standards`, or the lite roster's correctness reviewer:** the non-empty standards file path list from Stage 3b, wrapped in a `<standards-paths>` block appended to the review context. The lite reviewer also checks the supplied standards and relevant coverage in its single pass.
 8. **For `data-migration` only:** the resolved review base ref from Stage 1 (`BASE:` marker), wrapped in `<review-base>` inside the review context so schema drift checks never assume `main`
 
 Persona sub-agents are **read-only** with respect to the project: they review and return structured JSON. They do not edit project files or propose refactors. The one permitted write is saving their full analysis to the resolved run-artifact path specified in the output contract.
