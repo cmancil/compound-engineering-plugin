@@ -2,7 +2,7 @@
 
 > Execute against the plan's guardrails — figure out the HOW with code in front of you, ship complete features, hand off to a clean PR.
 
-`ce-work` is the **execution** skill. It takes a plan (or, for smaller scope, a bare prompt), executes the implementation against the plan's guardrails, runs tests continuously, selects an implementation engine and safe scheduling strategy, runs quality gates, and hands off to a commit + PR flow. It can keep implementation on the current host or route bounded units to another qualified model/harness while the host retains verification, canonical commits, and shipping. It treats the plan as a **decision artifact** — authoritative for scope, decisions, units, and tests — and figures out the actual implementation itself. **It is the HOW phase that `ce-plan` deliberately does not pre-write.**
+`ce-work` is the **execution** skill. It takes a plan (or, for smaller scope, a bare prompt), executes the implementation against the plan's guardrails, selects an implementation engine and safe scheduling strategy, verifies the changed behavior, and hands off to a commit + PR flow. It can keep implementation on the current host or route bounded units to another qualified model/harness while the host retains verification, canonical commits, and shipping. It treats the plan as a **decision artifact** — authoritative for scope, decisions, units, and tests — and figures out the actual implementation itself. **It is the HOW phase that `ce-plan` deliberately does not pre-write.**
 
 This is the fourth and final step in the compound-engineering ideation chain:
 
@@ -21,7 +21,7 @@ This is the fourth and final step in the compound-engineering ideation chain:
 
 | Question | Answer |
 |----------|--------|
-| What does it do? | Reads an implementation-ready plan (or scopes a bare prompt), executes against the guardrails, runs tests continuously, ships a reviewed PR |
+| What does it do? | Reads an implementation-ready plan (or scopes a bare prompt), executes against the guardrails, verifies the change, ships a reviewed PR |
 | When to use it | Implementing a `ce-plan` plan with `artifact_readiness: implementation-ready`; small/medium bare-prompt work; resuming partly-shipped work |
 | What it produces | Commits + a PR (or just commits, no-PR path) |
 | Caller-owned mode | For outer orchestrators (e.g. `lfg`): `mode:return-to-caller <plan path>` implements and locally verifies, then returns a structured envelope and skips the standalone shipping tail (final simplify, review, PR, CI). Mid-implementation Simplify as You Go still runs. |
@@ -63,7 +63,7 @@ Asking an agent "implement this plan" goes wrong in predictable ways:
 - The plan is authoritative for **WHAT**; the agent figures out **HOW** with code in front of it
 - An idempotency check before each task — if verification is already satisfied, skip it
 - Scope-appropriate implementation (native inline/subagents by default, or a sanctioned cross-model route) and scheduling (serial or bounded independent waves)
-- Test discovery + evidence selection before behavior changes, plus integration coverage and a system-wide test check before any task is marked done
+- Existing test discovery and verification scoped to what changes, with integration coverage where an affected boundary needs proof
 - Portable self-sizing code review with a residual-work gate — accept, file, fix, or stop, but never silently ship
 - Every PR carries an operational validation plan — what to monitor, what triggers rollback
 
@@ -89,7 +89,7 @@ When the plan defines U-IDs, they propagate as task prefixes, into commit messag
 
 ### 5. Test evidence gates before "done"
 
-A task isn't done when the code compiles. Before changing behavior, `ce-work` discovers the existing test files for what's being changed and chooses the right proof: use an existing failing test, update or strengthen the existing test that owns the contract, add a focused failing test, capture characterization coverage, or record a deliberate exception with replacement verification. Before marking a feature-bearing task complete, it checks that test scenarios cover the categories that apply (happy path, edges, error paths, integration), and traces two levels out for callbacks, middleware, and observers the change might affect. Mocking everything proves logic in isolation; integration coverage is what proves the layers actually work together.
+For routine behavior changes, `ce-work` defaults to one focused pass with existing tests. It adds or strengthens coverage for a material gap, uses proof-first when requested or when reproducing the old behavior adds evidence, and broadens validation for a concrete risk or required gate. A documentation-only edit can use a diff or artifact check. Passing evidence carries through commits, simplification, review, and shipping while the behavior and inputs it covers stay current.
 
 ### 6. Portable code review with explicit residual handling
 

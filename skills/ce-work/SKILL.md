@@ -92,7 +92,7 @@ Determine how to proceed based on what was provided in `<input_document>` (after
 1. **Scan the work area**
 
    - Identify files likely to change based on the prompt
-   - Find existing test files for those areas (search for test/spec files that import, reference, or share names with the implementation files)
+   - For behavior changes, find existing coverage for the affected entry points
    - Note local patterns and conventions in the affected areas
 
 2. **Assess complexity and route**
@@ -235,16 +235,15 @@ Determine how to proceed based on what was provided in `<input_document>` (after
    Give each native worker:
    - The plan path plus a **bounded unit packet** and inherited authority — Goal Capsule, Definition of Done, the unit's section, the Verification Contract entries relevant to it, any referenced R/F/AE/KTD excerpts, **plus any Product Contract Key Decision whose `Governs R…` links name the unit's cited R-IDs** (its `session-settled:` annotation reaches the worker only through this reverse link — cited KTDs alone carry only planning-decision labels). A downstream worker may narrow that unit and authority, never broaden either. Do not send "read the whole plan" as the worker prompt. (For a legacy non-unified plan, the plan path for reference is acceptable.)
    - The unit's Goal, Files, Approach, Execution note, Patterns, Test scenarios, Verification, and any resolved deferred questions for it.
-   - Instruction to check whether the unit's test scenarios cover all applicable categories (happy paths, edge cases, error paths, integration) and supplement gaps before writing tests.
-   - **Instruction to choose the unit's evidence strategy and gather the evidence** (see Evidence Strategy in Phase 2) — for behavior-bearing changes, honor the Execution note and default to proof-first or characterization-first: create/update/strengthen the test and observe the red failure or characterization baseline **before** changing production code. The worker is the only party that witnesses this, so it must capture it as it goes.
+   - **Instruction to follow the Evidence Strategy in `references/implementation-loop.md` for the unit.** Pass the relevant rules, including when to reuse tests or add coverage. When a red failure or characterization baseline is needed, the worker must observe and record it before changing production code.
    - **Instruction to report, in its final message, both (a) the file paths it changed and (b) the unit's verification evidence** — `behavior_changed`, existing tests inspected, tests added/changed or used unchanged, the red failure or characterization observed (when applicable), the verification run and result, and any deliberate no-test exception with its reason. The handoff is a text summary on most harnesses with no guaranteed diff, so reported paths are the orchestrator's starting hint (it still verifies the actual tree); the evidence fields are **not** reconstructable from the tree afterward, so a worker that omits them forces the orchestrator to re-derive or leave `verification_evidence` incomplete.
-   - **Do not commit.** Ordinary native workers implement and may run their *own unit's* focused tests in isolation as a self-check, but the **orchestrator owns staging, committing, and the authoritative test runs**. An external cross-model worker may create isolated transport commits only under its conditional protocol; those are change transport, never canonical commits. (Capability note: a harness that *reaps* the isolated workspace on worker completion — none of our current targets do — would instead require the worker to commit to its branch; confirm before assuming it.)
+   - **Do not commit.** The **orchestrator owns staging, committing, and the authoritative test runs**. Have workers run pre-implementation proof when selected and run post-edit checks only when needed to diagnose or complete their unit. An external cross-model worker may create isolated transport commits only under its conditional protocol; those are change transport, never canonical commits. (Capability note: a harness that *reaps* the isolated workspace on worker completion — none of our current targets do — would instead require the worker to commit to its branch; confirm before assuming it.)
 
    **Shared-workspace constraints** — when subagents share your working directory (no isolation): they must not `git add`, commit, or run the full test suite concurrently (index corruption + test interference); the orchestrator does all of that after the batch. A worker may run a single focused unit test only if it touches no shared state.
 
    **Permission mode:** Omit the `mode` parameter when dispatching subagents so the user's configured permission settings apply. Do not pass `mode: "auto"` — it overrides user-level settings like `bypassPermissions`.
 
-   **After each serial inline/subagent unit:** review the diff against the unit's scope and `Files:`, run the relevant tests, fix before starting the next (never on a broken tree), record the unit's verification evidence (from the worker's return when a worker ran), update the task list (never edit the plan body — progress lives in commits), and commit. If the unit used a native subagent worker, retire its handle (closing/releasing it only when the harness exposes that operation and assigns that lifecycle action to the caller), then dispatch the next subagent unit in a new worker context. An inline unit has no worker handle to retire; start the next unit directly.
+   **After each serial inline/subagent unit:** review the diff against the unit's scope and `Files:`, satisfy the Phase 2 verification policy, fix in-scope failures before moving on, record the unit's evidence (including worker evidence when available), update the task list (never edit the plan body — progress lives in commits), and commit. If the unit used a native subagent worker, retire its handle (closing/releasing it only when the harness exposes that operation and assigns that lifecycle action to the caller), then dispatch the next subagent unit in a new worker context. An inline unit has no worker handle to retire; start the next unit directly.
 
    **After a parallel inline/subagent batch — the orchestrator integrates; never trust the handoff summary alone:**
    1. Wait for every worker in the batch to finish.
@@ -262,7 +261,9 @@ Determine how to proceed based on what was provided in `<input_document>` (after
 
 ### Phase 2: Execute
 
-Before implementing the first task, you must read `references/implementation-loop.md`. Follow that reference for every task's evidence choice, implementation, verification, and completion stops before moving to incremental commits.
+Before implementing the first task, including trivial direct edits, you must read `references/implementation-loop.md`. Follow its verification policy for every change and its completion stops for tracked tasks.
+
+Carry that verification policy through simplification, review fixes, and shipping. When invoking a helper such as `ce-simplify-code` within `ce-work`, give it the existing results and instruct it to use this policy for check selection and reuse in place of its default validation commands. Keep explicitly required project, plan, and controller gates.
 
 2. **Incremental Commits**
 
@@ -281,8 +282,7 @@ Before implementing the first task, you must read `references/implementation-loo
 
    **Commit workflow:**
    ```bash
-   # 1. Verify tests pass (use project's test command)
-   # Examples: bin/rails test, npm test, pytest, go test, etc.
+   # 1. Confirm the selected verification is current for this change
 
    # 2. Stage only files related to this logical unit (not `git add .`)
    git add <files related to this logical unit>
@@ -307,15 +307,7 @@ Before implementing the first task, you must read `references/implementation-loo
    - Follow the project's coding standards already in your context
    - When in doubt, grep for similar implementations
 
-4. **Test Continuously**
-
-   - Run relevant tests after each significant change
-   - Don't wait until the end to test
-   - Fix failures immediately
-   - Add new tests for new behavior, update tests for changed behavior, remove tests for deleted behavior
-   - **Unit tests with mocks prove logic in isolation. Integration tests with real objects prove the layers work together.** If your change touches callbacks, middleware, or error handling — you need both.
-
-5. **Simplify as You Go**
+4. **Simplify as You Go**
 
    After completing a cluster of related implementation units (or every 2-3 units), review recently changed files for simplification opportunities — consolidate duplicated patterns, extract shared helpers, and improve code reuse and efficiency. This is especially valuable when using subagents, since each agent works with isolated context and can't see patterns emerging across units.
 
@@ -325,7 +317,7 @@ Before implementing the first task, you must read `references/implementation-loo
 
    When the plan carries `session-settled:`-labeled KTDs or Key Decisions, pass the plan path as structure-pin context, not as the simplification scope, with the one-line constraint that labeled entries are structure pins the simplification must preserve (e.g., deliberate duplication stays duplicated).
 
-6. **Figma Design Sync** (if applicable)
+5. **Figma Design Sync** (if applicable)
 
    For UI work with Figma designs:
 
@@ -334,7 +326,7 @@ Before implementing the first task, you must read `references/implementation-loo
    - Fix visual differences identified
    - Repeat until implementation matches design
 
-7. **Frontend Design Guidance** (if applicable)
+6. **Frontend Design Guidance** (if applicable)
 
    For UI tasks without a Figma design -- where the implementation touches view, template, component, layout, or page files, creates user-visible routes, or the plan contains explicit UI/frontend/design language:
 
@@ -342,7 +334,7 @@ Before implementing the first task, you must read `references/implementation-loo
    - When browser tooling is available, inspect the changed UI at desktop and mobile widths before final validation. If no browser access is available, do a code-level responsive/layout review and record that browser verification was unavailable.
    - Phase 4's screenshot capture still applies when the change is user-visible.
 
-8. **Track Progress**
+7. **Track Progress**
    - Keep the task list updated as you complete tasks
    - Note any blockers or unexpected discoveries
    - Create new tasks if scope expands
@@ -363,7 +355,7 @@ When all Phase 2 tasks are complete and execution transitions to quality check, 
 **Review is two steps — review, then fix.** `ce-code-review` is review-only. It returns findings (markdown or `mode:agent` JSON); it never edits the checkout, commits, or applies fixes.
 
 1. **Review** — Invoke the `ce-code-review` skill (invocation command in `references/review-findings-followup.md` § Fallback). Use `mode:agent` in orchestrated workflows; pass `plan:<path>` when you have a plan, `base:<ref>` when the merge base is known, and `depth:full` when a deep/thorough review was explicitly requested.
-2. **Apply fixes** — Load `references/review-findings-followup.md`. Filter eligibility on JSON only, **batch applicable findings by file**, dispatch fix subagents (parallel when file sets are disjoint). The orchestrator merges diffs, runs tests, and commits — it does not pre-investigate findings.
+2. **Apply fixes** — Load `references/review-findings-followup.md`. Filter eligibility on JSON only, **batch applicable findings by file**, dispatch fix subagents (parallel when file sets are disjoint). The orchestrator integrates, verifies, and commits — it does not pre-investigate findings.
 3. **Residual Work Gate** — Only after followup; unresolved actionable findings go through the gate in `shipping-workflow.md` (autonomous sessions auto-accept + record residuals; interactive sessions ask).
 
 ## Return-to-Caller Mode
@@ -422,12 +414,6 @@ gates.
 - Don't reinvent - match what exists
 - A KTD or Product Contract Key Decision carrying a `session-settled:` annotation (classes `user-directed` / `user-approved`) records a decision the user already made — it is not yours to improve. A product decision's label arrives through the Key Decision whose `Governs R…` links name your unit's Rs, not through a KTD. This scopes to labeled entries only: details the plan leaves open remain your judgment, and a real defect discovered inside a settled approach is still surfaced at full strength — the label never suppresses defect evidence. If implementation reveals a labeled decision is invalidating-grade unworkable (infeasible, wrong-thing, destructive), that is a genuine blocker: surface it rather than silently working around or "fixing" the decision
 
-### Test As You Go
-
-- Run tests after each change, not at the end
-- Fix failures immediately
-- Continuous testing prevents big surprises
-
 ### Quality is Built In
 
 - Standalone shipping holds a `ce-code-review` receipt or an explicit fixed-phrase skip before commit/PR (completion gate in Phase 3-4; details in `shipping-workflow.md`)
@@ -443,7 +429,6 @@ gates.
 - **Analysis paralysis** - Don't overthink, read the plan and execute
 - **Skipping clarifying questions** - Ask now, not after building wrong thing
 - **Ignoring plan references** - The plan has links for a reason
-- **Testing at the end** - Test continuously or suffer later
 - **Forgetting to track progress** - Update task status as you go or lose track of what's done
 - **80% done syndrome** - Finish the feature, don't move on early
 - **Skipping review without a receipt or fixed skip phrase** — standalone shipping is not done until a `ce-code-review` receipt exists or the shipping summary carries an exact skip phrase; mental self-review and "already applied external findings" do not count
