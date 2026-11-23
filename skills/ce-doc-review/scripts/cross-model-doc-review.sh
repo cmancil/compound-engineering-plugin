@@ -539,11 +539,7 @@ reap() {
 
 # TERM/INT: reap the live peer group, then exit cleanly (HUP remains ignored).
 on_term() {
-  if [ -n "${_HEARTBEAT_PID:-}" ]; then
-    kill "$_HEARTBEAT_PID" 2>/dev/null || true
-    wait "$_HEARTBEAT_PID" 2>/dev/null || true
-    _HEARTBEAT_PID=""
-  fi
+  if [ -n "${_HEARTBEAT_PID:-}" ]; then stop_heartbeat; fi
   if [ -n "${ACTIVE_PEER_PID:-}" ]; then
     log "received TERM/INT; reaping peer process group $ACTIVE_PEER_PID"
     _term_peer="$ACTIVE_PEER_PID"
@@ -575,17 +571,36 @@ build_cmd() {
 # cross-model-adversarial-review.sh and cross-model-doc-review.sh (kernel parity).
 _HEARTBEAT_PID=""
 start_heartbeat() {
-  local every="${CROSS_MODEL_HEARTBEAT_SECS:-60}" parent_pid="$$"
+  local every="${CROSS_MODEL_HEARTBEAT_SECS:-60}" parent_pid="$$" interrupted=""
   # Floor to 1s: a non-numeric or 0 value would make `sleep` return instantly and
   # spin the loop, flooding out.log into the runner's byte cap.
   case "$every" in ''|*[!0-9]*) every=60 ;; esac; [ "$every" -lt 1 ] && every=1
-  ( local t0 n; t0="$(date +%s)"
-    while kill -0 "$parent_pid" 2>/dev/null; do
-      sleep "$every"
-      kill -0 "$parent_pid" 2>/dev/null || break
+  # Defer cancellation until the wrapper can identify its heartbeat child.
+  trap 'interrupted=1' TERM INT
+  ( local t0 n timer=""
+    # KILL the sleep directly in case it has not reset inherited traps yet.
+    trap '
+      interrupted=1
+      if [ -n "$timer" ]; then kill -KILL "$timer" 2>/dev/null || true; fi
+    ' TERM
+    t0="$(date +%s)"
+    while [ -z "$interrupted" ] && kill -0 "$parent_pid" 2>/dev/null; do
+      # The timer belongs to the heartbeat and must never hold the wrapper's pipes.
+      sleep "$every" </dev/null >/dev/null 2>&1 &
+      timer=$!
+      # TERM can arrive before the PID assignment or interrupt the first wait.
+      if [ -n "$interrupted" ]; then kill -KILL "$timer" 2>/dev/null || true; fi
+      if ! wait "$timer" 2>/dev/null; then
+        wait "$timer" 2>/dev/null || true
+        break
+      fi
+      timer=""
+      [ -z "$interrupted" ] && kill -0 "$parent_pid" 2>/dev/null || break
       n="$(date +%s)"; log "peer alive ($(( n - t0 ))s elapsed)"
     done ) &
   _HEARTBEAT_PID=$!
+  trap 'on_term' TERM INT
+  if [ -n "$interrupted" ]; then on_term; fi
 }
 stop_heartbeat() {
   if [ -n "$_HEARTBEAT_PID" ]; then
