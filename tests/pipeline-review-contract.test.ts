@@ -119,18 +119,21 @@ describe("ce-work review contract", () => {
     expect(assessIdx).toBeLessThan(markDoneIdx)
   })
 
-  test("quality checklist says 'Testing addressed' not 'Tests pass'", async () => {
-    const content = await readRepoFile("skills/ce-work/SKILL.md")
-    // Quality checklist extracted to references/shipping-workflow.md
-    const shipping = await readRepoFile("skills/ce-work/references/shipping-workflow.md")
+  test("uses focused validation and carries current results through shipping", async () => {
+    const [skill, implementation, shipping] = await Promise.all([
+      readRepoFile("skills/ce-work/SKILL.md"),
+      readRepoFile("skills/ce-work/references/implementation-loop.md"),
+      readRepoFile("skills/ce-work/references/shipping-workflow.md"),
+    ])
 
-    // New language present in reference file
-    expect(shipping).toContain("Testing addressed")
+    expect(implementation).toContain("one focused existing validation pass")
+    expect(implementation).toContain("Broaden only to satisfy an explicit requirement or cover a material risk")
+    expect(implementation).toContain("Reuse a passing result when")
+    expect(shipping).toContain("Carry forward current results under Verification Scope")
+    expect(shipping).toContain("Run only missing or invalidated checks")
 
-    // Old language fully removed from both
-    expect(content).not.toContain("Tests pass (run project's test command)")
-    expect(content).not.toContain("- All tests pass")
-    expect(shipping).not.toContain("Tests pass (run project's test command)")
+    expect(skill).not.toContain("**Test Continuously**")
+    expect(shipping).not.toMatch(/^\s*(?:[-*#]\s*)?run (?:the )?full (?:test )?suite\b/im)
   })
 
   test("SKILL.md stub points to shipping-workflow reference", async () => {
